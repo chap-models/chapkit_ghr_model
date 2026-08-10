@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Ruff / type checkers / test caches
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.pytest_cache/
+.coverage
+.coverage.*
+
+# IDEs / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Environment variables
+.env
+
+# R
+.Rhistory
+.RData
+.Rproj.user
+
+# chapkit runtime / local test outputs
+data/
+test_out/
+report_test/
+*.db
+*.sqlite
+*.sqlite3
+
+# Files the scripts write into the working directory at run time. Anchored to
+# the project root so fixtures under example_data/ are still tracked -- an
+# unanchored "config.yml" would exclude example_data/config.yml, which
+# `make test-local` needs.
+/config.yml
+/model.rds
+/selection_re.rds
+/selection_report_re.html
+/historic.csv
+/future.csv
+/predictions.csv

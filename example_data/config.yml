@@ -1,0 +1,43 @@
+# Example configuration, in the flat layout chapkit's ShellModelRunner writes.
+# Matches GHRModelConfig in main.py. Used by `make test-local`.
+#
+# Tuned for the dengue_MS fixture: 11 Brazilian microregions, monthly,
+# 2001-01 to 2019-09, forecasting the final 3 months.
+
+prediction_periods: 3
+
+# dengue_MS has no precipitation, so this uses temperature and PDSI (a drought
+# index) rather than relabelling PDSI as rainfall.
+additional_continuous_covariates:
+  - mean_temperature
+  - pdsi
+
+re_spatial: bym2
+re_seasonal: rw1
+re_interannual: iid
+
+# PC priors as "U:alpha" pairs. The forecast uses the first; the selection
+# report searches over all. BSC's Laos demo uses "0.5:0.01;1:0.01".
+priors: "0.5:0.01"
+
+roll_mean: "mean_temperature:3;pdsi:3"
+roll_sum: ""
+lag: "mean_temperature:1;pdsi:1"
+nl: ""
+standardize: true
+
+family: nbinomial
+offset: population
+# BSC's pipeline divides population by a constant to help INLA converge.
+# Without this, some windows produce NAN/INF values in the log-likelihood.
+offset_scale: 10000
+n_samples: 200
+nthreads: 4
+
+# Random-effect selection report. Covers select_re() only, not select_fe().
+# The report_re_* fields are its search space, independent of the re_* fields
+# above which pin the single configuration the forecast fits.
+emit_re_selection_report: false
+report_re_spatial: "bym2"
+report_re_seasonal: "rw1,rw2"
+report_re_interannual: "iid,rw1,rw2"

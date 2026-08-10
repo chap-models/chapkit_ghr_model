@@ -1,0 +1,6 @@
+services:
+  ghr:
+    image: ghcr.io/chap-models/chapkit_ghr_model:latest
+    pull_policy: always
+    ports:
+      - "8000:8000"

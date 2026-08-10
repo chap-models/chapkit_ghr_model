@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install deps (incl. dev)
+        run: uv sync --all-groups
+      - name: Lint
+        run: make lint
+
+  docker-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: true
+          tags: chapkit-ghr-model:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Start container
+        run: docker run -d --name chapkit-ci -p 8000:8000 chapkit-ghr-model:ci
+      - name: Wait for /health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8000/health | grep -q '"healthy"'; then
+              echo "Service healthy after ${i} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Service did not become healthy within 120s"
+          exit 1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install deps (incl. dev)
+        run: uv sync --all-groups
+      - name: Run chapkit test against container
+        run: uv run chapkit test --url http://localhost:8000 --rows 400 --predict-rows 200 --timeout 1200 --verbose
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs chapkit-ci
+      - name: Stop container
+        if: always()
+        run: docker rm -f chapkit-ci
