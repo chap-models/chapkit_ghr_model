@@ -73,11 +73,8 @@ if (anyDuplicated(key)) {
   )
 }
 
-# Each supplied series must be internally consecutive: derive_covariates() rolls
-# and lags on row adjacency, so a missing period (an absent row, not an NA) would
-# make non-adjacent periods look adjacent. Checked per block -- the historic/
-# future seam is intentionally not constrained, since CHAP supplies them
-# contiguous and forecasting a later window is a separate case.
+# Per block: each series must be internally consecutive (see assert_regular_periods).
+# The historic/future seam is intentionally left free.
 assert_regular_periods(combined[!is_future, , drop = FALSE])
 assert_regular_periods(combined[is_future, , drop = FALSE])
 
@@ -155,12 +152,9 @@ if (!is.null(nl_spec) && length(cov_terms)) {
   for (cov in names(nl_spec)) {
     n <- nl_spec[[cov]][1]  # validate_nl_spec() guarantees exactly one
 
-    # Scope to THIS covariate's derived terms on the "<cov>." name boundary. A
-    # bare prefix would also catch a longer covariate ("temp" -> "temperature"),
-    # and because cov_nl() selects by prefix too, passing the full term list would
-    # convert the longer covariate's terms as well -- and the replacement below
-    # would then drop them, silently making a covariate non-linear that the user
-    # never named. Passing only this covariate's terms keeps cov_nl() honest.
+    # Scope to THIS covariate's terms (see cov_terms_for): cov_nl() selects by
+    # prefix, so passing the full list would also convert a longer covariate's
+    # terms, and the replacement below would silently make it non-linear.
     this_terms <- cov_terms_for(cov_terms, cov)
     nl_terms <- try(unlist(GHRmodel::cov_nl(this_terms, pattern = cov, n = n)), silent = TRUE)
     if (inherits(nl_terms, "try-error") || !length(nl_terms)) {

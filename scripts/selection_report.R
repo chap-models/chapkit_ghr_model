@@ -24,14 +24,8 @@ run_re_selection_report <- function(df, cfg, geo_file, offset_col) {
   graph <- build_graph(geo_file, df$location)
 
   # `g` and the priors must land in the GLOBAL environment, not this function's
-  # frame. select_re() checks with a bare exists("g") from inside the GHRmodel
-  # namespace, and INLA resolves `graph = g` / `hyper = prec1` out of the
-  # formula environment at fit time; both searches walk the namespace's parent
-  # chain to globalenv() and never see a wrapper function's locals. A local
-  # binding fails with "Spatial graph 'g' not found in the environment".
-  #
-  # This is why the report code works when run at top level and needs explicit
-  # global assignment once it lives in a function.
+  # frame -- select_re()/INLA resolve them by name up the namespace parent chain,
+  # which reaches globalenv() but never a function's locals (see bind_priors).
   assign("g", graph, envir = globalenv())
   on.exit(suppressWarnings(rm("g", envir = globalenv())), add = TRUE)
 
@@ -42,10 +36,8 @@ run_re_selection_report <- function(df, cfg, geo_file, offset_col) {
   )
   cat("Searching over priors:", paste(prior_names, collapse = ", "), "\n")
 
-  # The search space comes entirely from the report_re_* fields, for all three
-  # slots, independent of the re_* fields that pin the forecast's single
-  # configuration. These are comma-separated sets, so they cannot be constrained
-  # by Literal in main.py -- validate them here.
+  # Search space from the report_re_* fields, independent of the forecast's re_*.
+  # Comma-separated sets (no Literal in main.py), so validate them here.
   report_spatial <- validate_re_choice(parse_choices(cfg$report_re_spatial), "spatial")
   report_seasonal <- validate_re_choice(parse_choices(cfg$report_re_seasonal), "seasonal")
   report_interannual <- validate_re_choice(
@@ -71,9 +63,8 @@ run_re_selection_report <- function(df, cfg, geo_file, offset_col) {
         family = cfg$family,
         nthreads = cfg$nthreads
       )
-      # select_report() hard-requires a .html extension. chapkit has no report
-      # entry point and imposes no PDF requirement, so HTML ships as-is and
-      # BSC's code needs no modification.
+      # select_report() hard-requires a .html extension; chapkit imposes no PDF
+      # requirement, so HTML ships as-is.
       GHRmodel::select_report(sel, "selection_report_re.html")
       saveRDS(sel, "selection_re.rds")
       TRUE

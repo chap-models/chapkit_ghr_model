@@ -116,15 +116,9 @@ RE_OPTIONS <- list(
 
 #' Validate random-effect choices for a slot.
 #'
-#' main.py constrains the single-value fields with Literal, so the API rejects
-#' bad values at config creation. This is the backstop for the paths pydantic
-#' does not cover: a hand-written config.yml when running the scripts directly,
-#' and the comma-separated report_re_* search-space fields, which cannot be
-#' expressed as Literal.
-#'
-#' Without this, an invalid value surfaces as GHRmodel's generic
-#' "'re$re' must be one of: iid, rw1, rw2, bym, bym2" partway through a job,
-#' with no indication of which parameter was at fault.
+#' Backstop for the paths pydantic's Literal doesn't cover: a hand-written
+#' config.yml, and the comma-separated report_re_* fields. Without it a bad value
+#' surfaces as GHRmodel's generic "must be one of ..." error partway through a job.
 validate_re_choice <- function(values, slot) {
   if (is.null(values)) return(NULL)
   allowed <- RE_OPTIONS[[slot]]
@@ -211,26 +205,16 @@ prepare_data <- function(df) {
 
 #' Guard against a missing period within a supplied series.
 #'
-#' derive_covariates() rolls and lags on ROW adjacency: a w-row window is treated
-#' as w consecutive periods. If a period is missing entirely -- its row absent,
-#' not NA -- the surrounding rows look adjacent and the rolling/lag values quietly
-#' span the gap. predict.R's mid-series completeness check cannot see this, since
-#' a missing row leaves no NA behind, and GHRmodel's own .check_consecutive() runs
-#' only at fit time, after the covariates are already wrong.
+#' derive_covariates() rolls and lags on ROW adjacency, so a period missing
+#' entirely -- its row absent, not NA -- makes the surrounding rows look adjacent
+#' and silently spans the gap. Applied to the historic and future series
+#' separately: each must be internally consecutive, but the seam between them is
+#' left free (CHAP supplies future contiguous with history, and chapkit's own
+#' fixture leaves a gap there).
 #'
-#' predict.R applies this to the historic and future series *separately*, so each
-#' must be internally consecutive. The seam between them is deliberately not
-#' constrained: CHAP supplies future contiguous with history, forecasting a later
-#' window is a different concern, and asserting contiguity here would also reject
-#' chapkit's own contract fixture, whose generator leaves a gap between the two
-#' blocks.
-#'
-#' Checks the time column's spacing rather than a calendar, so it needs no period
-#' arithmetic: monthly steps vary 28-31 days and the weekly parse jumps a day at
-#' the year boundary, so a step is called a gap only when it exceeds 1.5x the
-#' location's median step. That tolerates the natural variation but catches the
-#' doubled (or larger) gap a dropped period leaves. Duplicated periods (median
-#' step 0) are left to predict.R's duplicate-key check.
+#' Compares each step to 1.5x the location's median step rather than a calendar,
+#' tolerating 28-31 day months and the weekly year-boundary jump while still
+#' catching a doubled gap. Duplicated periods (median 0) are left to predict.R.
 assert_regular_periods <- function(df) {
   gappy <- character(0)
   for (loc in unique(df$location)) {
@@ -282,19 +266,13 @@ parse_time_period <- function(tp) {
 
 #' Build the adjacency matrix GHRmodel's bym2 effect needs.
 #'
-#' Returned as a matrix that the caller must bind to the name `g` in the
-#' environment fit_models() is called from -- the generated INLA formula
-#' references `graph = g` by name, it is not passed as an argument.
+#' Bound by the caller to the name `g`: the generated INLA formula references
+#' `graph = g` by name, not as an argument.
 #'
-#' Returns NULL only when no geometry was supplied at all -- a legitimate
-#' deployment, where the caller drops the spatial term.
-#'
-#' If geometry IS supplied but cannot be matched to the data, this raises rather
-#' than returning NULL. Silently dropping bym2 there would fit a materially
-#' different model while reporting success, which is how BSC's own Laos demo
-#' would misbehave: their GADM polygon names ("Louangnamtha", "Xiangkhouang",
-#' "Vientiane") do not match the data's ("LouangNamtha", "Xiangkhoang",
-#' "Vientiane[prefecture]") and they patch them by hand before use.
+#' NULL only when no geometry was supplied (a legitimate deployment; the caller
+#' drops the spatial term). If geometry IS supplied but cannot be matched, this
+#' raises rather than returning NULL -- silently dropping bym2 would fit a
+#' materially different model while reporting success.
 build_graph <- function(geo_path, locations) {
   if (is.null(geo_path)) {
     message("No geometry supplied; spatial random effect disabled.")
@@ -417,18 +395,11 @@ derive_covariates <- function(data, covariates, roll_mean, roll_sum, lag, standa
       }
     }
 
-    # No roll spec for this covariate: select_fe() still emits "<cov>.noroll"
-    # (the else branches of its roll_mean/roll_sum loops), so match that rather
-    # than keeping the raw name, or derived terms won't line up with the names
-    # a user reads in a selection report.
-    #
-    # Deliberately NOT mirroring select_fe() further here. There, the roll_sum
-    # else branch also fires for covariates that *do* have a roll_mean entry,
-    # so tmax with roll_mean=3 yields both tmax.noroll and tmax.rmean3. That is
-    # correct for select_fe, where each derived column is a separate univariable
-    # candidate competing for n_select_uni slots. This wrapper puts every term
-    # into one formula, so replicating it would place a variable and its own
-    # rolling mean in the same regression as collinear predictors.
+    # No roll spec: match select_fe()'s "<cov>.noroll" so terms line up with a
+    # selection report. Not mirrored further -- select_fe() also emits <cov>.noroll
+    # alongside <cov>.rmean<w> as competing univariable candidates; here every term
+    # shares one formula, so that would add a variable and its own rolling mean as
+    # collinear predictors.
     if (!length(made)) {
       newvar <- paste0(cov, ".noroll")
       data[[newvar]] <- data[[cov]]
@@ -617,22 +588,13 @@ make_prior <- function(u, alpha) {
 }
 
 #' Parse the "U:alpha;U:alpha" prior encoding and bind each pair as prec1,
-#' prec2, ... in `env`.
+#' prec2, ... in `env` (global by default).
 #'
-#' GHRmodel resolves priors by *name* -- select_re() takes prior = c("prec1",
-#' "prec2") and writes `hyper = prec1` into the formula string, leaving INLA to
-#' look the object up at fit time. So the objects must exist in the environment
-#' the fit runs from, under exactly those names.
-#'
-#' Binds into the global environment by default, and that is load-bearing rather
-#' than lazy. GHRmodel checks for these with a bare `exists()` from inside its
-#' own namespace, and INLA resolves `hyper = prec1` / `graph = g` out of the
-#' formula's environment at fit time. Both searches walk the package namespace's
-#' parent chain, which reaches globalenv() but never the frame of a wrapper
-#' function. Binding into a local frame yields
-#' "Spatial graph 'g' not found in the environment".
-#'
-#' Returns the character vector of names created, in order.
+#' GHRmodel resolves priors by *name*: select_re() writes `hyper = prec1` into
+#' the formula string and INLA looks it up at fit time. Both search the package
+#' namespace's parent chain, which reaches globalenv() but never a wrapper
+#' function's frame -- binding into a local frame yields "Spatial graph 'g' not
+#' found in the environment". Returns the names created, in order.
 bind_priors <- function(spec, env = globalenv()) {
   pairs <- parse_spec_pairs(spec)
   if (!length(pairs)) {

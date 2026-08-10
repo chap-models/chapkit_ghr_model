@@ -37,11 +37,9 @@ test-unit: build
 	@echo ">>> Unit checks for scripts/lib.R"
 	@docker run --rm --platform linux/amd64 -v $(PWD):/work $(IMAGE) Rscript tools/test_lib.R
 
-# Exercises the scripts through the same contract chapkit uses (config.yml in
-# the working directory, CSV in, CSV out) without starting the service. Runs from
-# a writable workspace copy the way the real service does, because /work is
-# root-owned and the service runs as the non-root 'app' user -- it cannot write
-# config.yml or model.rds into /work.
+# Exercises the scripts through chapkit's contract (config.yml in cwd, CSV in,
+# CSV out) without starting the service. Runs from a writable mktemp copy because
+# the container's /work is read-only to the runtime user.
 test-local: build
 	@echo ">>> Running train + predict against example_data"
 	@docker run --rm --platform linux/amd64 \

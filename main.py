@@ -42,14 +42,8 @@ class GHRModelConfig(BaseConfig):
     )
 
     # ---- Random effects -------------------------------------------------
-    # Mirrors select_re()'s re_spatial / re_seasonal / re_interannual, but
-    # pinned to one choice each rather than a set to search over. "none" drops
-    # the term entirely.
-    # Constrained to select_re()'s documented options per slot, which are
-    # narrower than write_inla_formulas() would accept. Declaring them as
-    # Literal emits a JSON Schema enum, so the Modeling App renders a dropdown
-    # and an invalid value is rejected at POST /api/v1/configs rather than
-    # failing partway through a prediction job.
+    # Literal, not str, so the schema is an enum: the Modeling App renders a
+    # dropdown and rejects a bad value at config POST, not partway through a job.
     re_spatial: Literal["bym2", "none"] = Field(
         default="bym2",
         description=(
@@ -80,11 +74,6 @@ class GHRModelConfig(BaseConfig):
     )
 
     # ---- Priors ---------------------------------------------------------
-    # BSC's demo defines two PC priors and searches over both:
-    #   prec1 = list(prec = list(prior = "pc.prec", param = c(0.5,  0.01)))
-    #   prec2 = list(prec = list(prior = "pc.prec", param = c(1.0,  0.01)))
-    # Encoded here as "U:alpha" pairs so a set can be expressed, matching the
-    # encoding used for the covariate parameters.
     priors: str = Field(
         default="0.5:0.01",
         description=(
@@ -99,8 +88,7 @@ class GHRModelConfig(BaseConfig):
     )
 
     # ---- Fixed effects --------------------------------------------------
-    # BaseConfig reserves additional_continuous_covariates as a CHAP-interpreted
-    # field; it names the climate covariates entering the model.
+    # additional_continuous_covariates is a BaseConfig field CHAP interprets specially.
     additional_continuous_covariates: list[str] = Field(
         default_factory=lambda: ["rainfall", "mean_temperature"],
         description="Continuous covariates to include as fixed effects.",
@@ -139,11 +127,8 @@ class GHRModelConfig(BaseConfig):
     )
 
     # ---- Likelihood and sampling ---------------------------------------
-    # Constrained to what the *forecast* path supports, which is narrower than
-    # what fit_models() accepts. fit_models() passes family straight to INLA
-    # without whitelisting, but sample_ppd() dispatches on it and raises
-    # "Unsupported family" for anything else -- so another family would fit
-    # successfully and then fail at the sampling step, after the expensive part.
+    # Only the two families sample_ppd() supports: fit_models() would accept
+    # others, then fail at the sampling step after the expensive fit.
     family: Literal["nbinomial", "poisson"] = Field(
         default="nbinomial",
         description=(
@@ -177,14 +162,8 @@ class GHRModelConfig(BaseConfig):
     )
 
     # ---- Selection report ----------------------------------------------
-    # chapkit has no report entry point, but it zips the whole train workspace
-    # into an ml_training_workspace artifact -- so select_report()'s HTML is
-    # retrievable from there. Off by default because it refits many candidate
-    # models and is far more expensive than the forecast itself.
-    # Named for what it actually does. BSC's full selection workflow is
-    # select_re() *then* select_fe(); only the random-effect stage is
-    # implemented here, so calling it "selection report" would overclaim.
-    # Fixed-effect search is out of scope for this version -- see README.
+    # chapkit has no report endpoint; the HTML rides out in the zipped training
+    # workspace. RE stage only (not select_fe()), which is what the name says.
     emit_re_selection_report: bool = Field(
         default=False,
         description=(
@@ -194,9 +173,8 @@ class GHRModelConfig(BaseConfig):
             "candidate models. Does not affect the forecast."
         ),
     )
-    # All three report_re_* fields are search spaces for the report, independent
-    # of the single configuration the forecast fits. They are comma-separated
-    # rather than Literal because they name sets; validated R-side.
+    # Report search spaces (sets), independent of the forecast's re_* fields.
+    # Comma-separated rather than Literal because they name sets; validated R-side.
     report_re_spatial: str = Field(
         default="bym2",
         description=(
@@ -234,9 +212,7 @@ info = MLServiceInfo(
     model_metadata=ModelMetadata(
         author="Global Health Resilience group, BSC (wrapped for CHAP by HISP Centre)",
         author_assessed_status=AssessedStatus.red,
-        # The wrapper's maintainer, not GHRmodel's. BSC authored the model and are
-        # credited above, but support for this service should not route to them --
-        # they did not write it and have not signed off on it.
+        # Wrapper maintainer, not BSC: they authored the model but don't support this service.
         contact_email="morten@dhis2.org",
         organization="Barcelona Supercomputing Center",
         organization_logo_url="https://www.bsc.es/sites/default/files/public/bscw2/content/about-bsc/bsc-logo.png",
@@ -271,17 +247,10 @@ app = (
         runner=runner,
         database_url=DATABASE_URL,
     )
-    # CHAP Core registration. Configured entirely by environment:
-    #   SERVICEKIT_ORCHESTRATOR_URL  registration endpoint
-    #   SERVICEKIT_REGISTRATION_KEY  shared secret, if the instance requires one
-    # With no orchestrator URL set, registration is skipped and the service runs
-    # normally -- verified healthy without those vars. Note it is not quite
-    # silent despite what chapkit's migration guide says: servicekit logs
-    # "registration.missing_orchestrator_url" at ERROR and "registration.skipped"
-    # at WARNING on every start. Harmless, but expect it in local logs.
-    #
-    # Omitting this call entirely would mean the service could never register,
-    # even when deployed with those vars set.
+    # CHAP Core registration, configured by env (SERVICEKIT_ORCHESTRATOR_URL,
+    # SERVICEKIT_REGISTRATION_KEY). Skipped when unset -- but servicekit still logs
+    # "registration.missing_orchestrator_url" (ERROR) and "registration.skipped"
+    # (WARNING) on every start. Harmless; expect it in local logs.
     .with_registration(keepalive_interval=15)
     .build()
 )

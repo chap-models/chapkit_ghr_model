@@ -390,4 +390,4 @@ GHRmodel itself, pinned to a commit on the `dhis2-workflow` branch.
 
 ## License
 
-[GPL-3.0](LICENSE), matching sister chap-models repos.
+[GPL-3.0](LICENSE)
