@@ -30,6 +30,11 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     UV_PROJECT_ENVIRONMENT=/app/.venv uv sync --frozen --no-dev --no-install-project
 
+# Commit the image was built from, reported as git_revision on /api/v1/info.
+# The publish workflow passes it; locally: --build-arg GIT_REVISION=$(git rev-parse HEAD)
+ARG GIT_REVISION=""
+ENV GIT_REVISION=${GIT_REVISION}
+
 COPY main.py ./
 COPY scripts/ ./scripts/
 
