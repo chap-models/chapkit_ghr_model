@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "ML service wrapping BSC's GHRmodel (dhis2-workflow) for CHAP"
 requires-python = ">=3.13"
 dependencies = [
-    "chapkit>=1.0.0",
+    "chapkit>=2.0.0,<3",
     "pandas>=2.3.3",
 ]
 
