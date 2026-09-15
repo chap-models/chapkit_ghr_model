@@ -23,7 +23,7 @@ help:
 
 build:
 	@echo ">>> Building $(IMAGE)"
-	@docker build --platform linux/amd64 -t $(IMAGE) .
+	@docker build --build-arg GIT_REVISION=$(shell git rev-parse HEAD 2>/dev/null) --platform linux/amd64 -t $(IMAGE) .
 
 run: build
 	@echo ">>> Running $(IMAGE) on :8000"

@@ -1,5 +1,9 @@
 services:
   ghr:
-    build: .
+    build:
+      context: .
+      # Bakes the commit into the image: GIT_REVISION=$(git rev-parse HEAD) docker compose up --build
+      args:
+        GIT_REVISION: ${GIT_REVISION:-}
     ports:
       - "8000:8000"
