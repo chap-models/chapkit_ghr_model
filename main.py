@@ -202,7 +202,7 @@ runner: ShellModelRunner[GHRModelConfig] = ShellModelRunner(
 info = MLServiceInfo(
     id="chapkit-ghr-model",
     display_name="GHRmodel (chapkit)",
-    version="0.1.0",
+    version="0.1.1",
     description=(
         "Bayesian hierarchical spatio-temporal model for climate-sensitive disease, "
         "built on R-INLA. Wraps BSC's GHRmodel package (dhis2-workflow branch), running "
