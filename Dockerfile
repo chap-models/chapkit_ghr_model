@@ -38,12 +38,11 @@ ENV GIT_REVISION=${GIT_REVISION}
 COPY main.py ./
 COPY scripts/ ./scripts/
 
-# The two chmods are load-bearing: INLA's binaries ship 0744 (predict fails with
-# "inla.mkl.run: Permission denied" without a+rX), and select_report() renders
-# its Rmd into GHRmodel's template dir, which must be writable for the optional
-# report.
-RUN chmod -R a+rX /usr/local/lib/R/site-library/INLA/bin \
-    && chmod a+w /usr/local/lib/R/site-library/GHRmodel/templates \
+# The chmod is load-bearing: select_report() renders its Rmd into GHRmodel's
+# template dir, so that dir must be writable for the optional report. The base
+# image's a+rX on site-library grants no write bit, and GHRmodel is installed
+# here rather than in the base.
+RUN chmod a+w /usr/local/lib/R/site-library/GHRmodel/templates \
     && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid 10001 --create-home app \
     && mkdir -p /work/data \
