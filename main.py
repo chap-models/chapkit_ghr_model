@@ -251,6 +251,7 @@ app = (
     # SERVICEKIT_REGISTRATION_KEY). Skipped when unset -- but servicekit still logs
     # "registration.missing_orchestrator_url" (ERROR) and "registration.skipped"
     # (WARNING) on every start. Harmless; expect it in local logs.
+    .with_monitoring()
     .with_registration(keepalive_interval=15)
     .build()
 )
