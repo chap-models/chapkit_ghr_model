@@ -42,6 +42,18 @@ opt_path <- function(p) {
 
 read_config <- function(path = "config.yml") {
   cfg <- if (file.exists(path)) yaml.load_file(path) else list()
+  # Two layouts reach here. main.py's ShellModelRunner writes every field flat;
+  # `chapkit mlproject run` writes chap-core's layout, with the model options
+  # nested under user_option_values and only prediction_periods and
+  # additional_continuous_covariates at the top. Hoist the nested options, or
+  # every one of them silently falls back to its default below. (ShellModelRunner
+  # has a config_format option, but mlproject run hardcodes "chap_core" with no
+  # way to choose it from the MLproject or the CLI.)
+  nested <- cfg$user_option_values
+  if (is.list(nested)) {
+    cfg$user_option_values <- NULL
+    cfg[names(nested)] <- nested
+  }
   # Defaults mirror GHRModelConfig in main.py so the scripts stay runnable
   # standalone (outside chapkit) for debugging.
   defaults <- list(

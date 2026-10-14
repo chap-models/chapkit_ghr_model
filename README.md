@@ -90,7 +90,7 @@ make test-unit      # unit checks for the helpers in scripts/lib.R
 make test-local     # run train.R + predict.R directly against example_data
 make test-contract  # chapkit's own contract test (synthetic data, no geo)
 make test-api       # train + predict as real API jobs, with real geometry
-make test-mlproject # chapkit's contract test against `chapkit mlproject run`
+make test-mlproject # test-contract + test-api against `chapkit mlproject run`
 ```
 
 Or run the prebuilt image from GHCR (once published):
@@ -117,14 +117,18 @@ docker run --rm --platform linux/amd64 -p 8000:8000 \
   chapkit mlproject run . --host 0.0.0.0 --port 8000
 ```
 
-`make test-mlproject` does this and runs chapkit's contract test against it.
+`make test-mlproject` does this and runs the contract and API smoke tests against it.
 Point `chap eval --model-name http://localhost:8000` at the running service, or
 use `chap eval --run-config.as-chapkit` directly on a machine that has R,
 INLA and GHRmodel installed.
 
+`chapkit mlproject run` writes `config.yml` in chap-core's layout, with the
+model options nested under `user_option_values`; `read_config()` in
+`scripts/lib.R` accepts that as well as the flat layout `main.py` writes.
+
 Chap's own MLproject runners (`docker_env` and friends) are not supported:
-they pass the config in a different layout from the flat `config.yml` the
-scripts read.
+they write the config under another file name, passed as `{model_config}`,
+which the scripts do not read.
 
 ## Configuration
 
@@ -334,7 +338,7 @@ Error: Configured covariate(s) not present in the data: rainfall
 | `make test-local` | train + predict directly against the fixture |
 | `make test-contract` | chapkit's contract test; supplies no geometry, so it also covers the spatial-effect-disabled path |
 | `make test-api` | real train and predict jobs over REST with geometry, returning 33 rows x 100 samples |
-| `make test-mlproject` | the contract test against the service `chapkit mlproject run` builds from `MLproject` |
+| `make test-mlproject` | `test-contract` and `test-api` against the service `chapkit mlproject run` builds from `MLproject`, which writes `config.yml` in chap-core's nested layout |
 
 ## Equivalence with BSC's reference pipeline
 

@@ -19,7 +19,7 @@ help:
 	@echo "  test-api       Train + predict as real jobs over the API, real geo data"
 	@echo "  stop-test      Stop the detached test service"
 	@echo "  mlproject      Regenerate MLproject from main.py"
-	@echo "  test-mlproject Serve the image via chapkit mlproject run and run chapkit's contract test"
+	@echo "  test-mlproject test-contract + test-api against chapkit mlproject run"
 	@echo "  lint           Run ruff format check + lint, and check MLproject is up to date"
 	@echo "  clean          Remove local image and test outputs"
 
@@ -99,8 +99,9 @@ lint:
 mlproject:
 	@uv run python tools/mlproject.py
 
-# The same contract test as test-contract, but against the service that
-# `chapkit mlproject run` builds from the MLproject instead of main.py.
+# test-contract and test-api, but against the service `chapkit mlproject run`
+# builds from the MLproject instead of main.py. test-api is the one that
+# catches a config not reaching the scripts: it checks n_samples took effect.
 test-mlproject: build
 	@docker rm -f chapkit-ghr-model-mlproject >/dev/null 2>&1 || true
 	@docker run -d --platform linux/amd64 -p $(TEST_PORT):8000 \
@@ -112,7 +113,8 @@ test-mlproject: build
 		if [ $$i = 40 ]; then echo "    service did not become healthy"; docker logs chapkit-ghr-model-mlproject; exit 1; fi; \
 		sleep 3; \
 	done
-	@uv run chapkit test --url $(TEST_URL) --rows 400 --predict-rows 200 --timeout 1200 --verbose; \
+	@uv run chapkit test --url $(TEST_URL) --rows 400 --predict-rows 200 --timeout 1200 --verbose \
+		&& python3 tools/api_smoke.py $(TEST_URL); \
 		status=$$?; docker rm -f chapkit-ghr-model-mlproject >/dev/null; exit $$status
 
 clean:
