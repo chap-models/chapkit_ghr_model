@@ -1,4 +1,4 @@
-.PHONY: help build run run-ghcr lint test-unit test-local test-api test-contract serve-test stop-test clean
+.PHONY: help build run run-ghcr lint mlproject test-mlproject test-unit test-local test-api test-contract serve-test stop-test clean
 
 IMAGE ?= chapkit-ghr-model:latest
 GHCR_IMAGE ?= ghcr.io/chap-models/chapkit_ghr_model:latest
@@ -18,7 +18,9 @@ help:
 	@echo "  test-contract  chapkit's own end-to-end contract test (synthetic data)"
 	@echo "  test-api       Train + predict as real jobs over the API, real geo data"
 	@echo "  stop-test      Stop the detached test service"
-	@echo "  lint           Run ruff format check + lint"
+	@echo "  mlproject      Regenerate MLproject from main.py"
+	@echo "  test-mlproject Serve the image via chapkit mlproject run and run chapkit's contract test"
+	@echo "  lint           Run ruff format check + lint, and check MLproject is up to date"
 	@echo "  clean          Remove local image and test outputs"
 
 build:
@@ -91,6 +93,27 @@ lint:
 	@uv run ruff format --check .
 	@echo ">>> Ruff lint"
 	@uv run ruff check .
+	@echo ">>> MLproject check"
+	@uv run python tools/mlproject.py --check
+
+mlproject:
+	@uv run python tools/mlproject.py
+
+# The same contract test as test-contract, but against the service that
+# `chapkit mlproject run` builds from the MLproject instead of main.py.
+test-mlproject: build
+	@docker rm -f chapkit-ghr-model-mlproject >/dev/null 2>&1 || true
+	@docker run -d --platform linux/amd64 -p $(TEST_PORT):8000 \
+		--name chapkit-ghr-model-mlproject $(IMAGE) \
+		chapkit mlproject run . --host 0.0.0.0 --port 8000 >/dev/null
+	@echo ">>> Waiting for $(TEST_URL)/health"
+	@for i in $$(seq 1 40); do \
+		if curl -fsS $(TEST_URL)/health >/dev/null 2>&1; then echo "    healthy"; break; fi; \
+		if [ $$i = 40 ]; then echo "    service did not become healthy"; docker logs chapkit-ghr-model-mlproject; exit 1; fi; \
+		sleep 3; \
+	done
+	@uv run chapkit test --url $(TEST_URL) --rows 400 --predict-rows 200 --timeout 1200 --verbose; \
+		status=$$?; docker rm -f chapkit-ghr-model-mlproject >/dev/null; exit $$status
 
 clean:
 	@docker rmi -f $(IMAGE) 2>/dev/null || true

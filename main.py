@@ -211,6 +211,12 @@ info = MLServiceInfo(
     ),
     model_metadata=ModelMetadata(
         author="Global Health Resilience group, BSC (wrapped for CHAP by HISP Centre)",
+        # Set explicitly: an MLproject without one serves the description in its place,
+        # and tools/mlproject.py checks the two services report the same info.
+        author_note=(
+            "Wraps BSC's GHRmodel without modifying it. The wrapper is maintained by HISP Centre; "
+            "BSC does not support this service."
+        ),
         author_assessed_status=AssessedStatus.red,
         # Wrapper maintainer, not BSC: they authored the model but don't support this service.
         contact_email="morten@dhis2.org",

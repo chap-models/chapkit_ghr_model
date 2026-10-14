@@ -67,12 +67,14 @@ does exactly that, with `on.exit()` cleanup so the globals do not leak.
 
 ```
 main.py            chapkit service definition and config schema
+MLproject          the same model as an MLproject, generated from main.py
 scripts/           what the runner invokes, and nothing else
   lib.R              shared wrapper helpers
   train.R            train entry point: validate + placeholder (no-op)
   selection_report.R optional RE selection report, sourced only when enabled
   predict.R          predict entry point (fit + posterior draws)
 tools/             development tooling, not shipped in the image
+  mlproject.py         generates MLproject from main.py, and checks it in `make lint`
   make_example_data.R  regenerates example_data/ from dengue_MS
   api_smoke.py         end-to-end API test, driven by `make test-api`
   test_lib.R           unit checks, driven by `make test-unit`
@@ -88,6 +90,7 @@ make test-unit      # unit checks for the helpers in scripts/lib.R
 make test-local     # run train.R + predict.R directly against example_data
 make test-contract  # chapkit's own contract test (synthetic data, no geo)
 make test-api       # train + predict as real API jobs, with real geometry
+make test-mlproject # chapkit's contract test against `chapkit mlproject run`
 ```
 
 Or run the prebuilt image from GHCR (once published):
@@ -95,6 +98,33 @@ Or run the prebuilt image from GHCR (once published):
 ```bash
 docker compose -f compose.ghcr.yml up   # service on :8000
 ```
+
+## Running from the MLproject
+
+`MLproject` describes the same model for `chapkit mlproject run` and
+`chap eval --run-config.as-chapkit`: the same service info, config options and
+defaults, and train/predict commands. It is generated from `main.py`, which
+stays the source of truth; edit `main.py` and run `make mlproject`.
+`make lint` (and so CI) fails when the file is stale, and also reads it back
+with chapkit's own MLproject parser to check the result matches `main.py`.
+
+The commands need R with INLA and GHRmodel, so the MLproject declares no
+environment; the service image provides one, and has the MLproject in `/work`:
+
+```bash
+docker run --rm --platform linux/amd64 -p 8000:8000 \
+  ghcr.io/chap-models/chapkit_ghr_model:latest \
+  chapkit mlproject run . --host 0.0.0.0 --port 8000
+```
+
+`make test-mlproject` does this and runs chapkit's contract test against it.
+Point `chap eval --model-name http://localhost:8000` at the running service, or
+use `chap eval --run-config.as-chapkit` directly on a machine that has R,
+INLA and GHRmodel installed.
+
+Chap's own MLproject runners (`docker_env` and friends) are not supported:
+they pass the config in a different layout from the flat `config.yml` the
+scripts read.
 
 ## Configuration
 
@@ -304,6 +334,7 @@ Error: Configured covariate(s) not present in the data: rainfall
 | `make test-local` | train + predict directly against the fixture |
 | `make test-contract` | chapkit's contract test; supplies no geometry, so it also covers the spatial-effect-disabled path |
 | `make test-api` | real train and predict jobs over REST with geometry, returning 33 rows x 100 samples |
+| `make test-mlproject` | the contract test against the service `chapkit mlproject run` builds from `MLproject` |
 
 ## Equivalence with BSC's reference pipeline
 
