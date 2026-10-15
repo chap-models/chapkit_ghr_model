@@ -42,13 +42,13 @@ opt_path <- function(p) {
 
 read_config <- function(path = "config.yml") {
   cfg <- if (file.exists(path)) yaml.load_file(path) else list()
-  # Two layouts reach here. main.py's ShellModelRunner writes every field flat;
-  # `chapkit mlproject run` writes chap-core's layout, with the model options
-  # nested under user_option_values and only prediction_periods and
-  # additional_continuous_covariates at the top. Hoist the nested options, or
-  # every one of them silently falls back to its default below. (ShellModelRunner
-  # has a config_format option, but mlproject run hardcodes "chap_core" with no
-  # way to choose it from the MLproject or the CLI.)
+  # Two layouts reach here. main.py's ShellModelRunner writes every field flat,
+  # and so does `chapkit mlproject run` from 2.4.0 (the MLproject sets
+  # meta_data.config_format: flat). Older chapkit ignores that key and writes
+  # chap-core's layout, with the model options nested under user_option_values
+  # and only prediction_periods and additional_continuous_covariates at the top.
+  # Hoist the nested options, or every one of them silently falls back to its
+  # default below.
   nested <- cfg$user_option_values
   if (is.list(nested)) {
     cfg$user_option_values <- NULL

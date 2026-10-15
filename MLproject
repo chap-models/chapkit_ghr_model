@@ -1,9 +1,5 @@
-# Generated from main.py by tools/mlproject.py -- do not edit by hand.
-# Regenerate with `make mlproject`; CI fails when this file is stale.
-#
-# Runs with `chapkit mlproject run .` or `chap eval --run-config.as-chapkit`.
-# No environment is declared: the commands need R with INLA and GHRmodel, which
-# the service image provides. See "Running from the MLproject" in README.md.
+# Generated from main.py by `chapkit mlproject export` -- do not edit by hand.
+# Regenerate with `chapkit mlproject export main.py`; add --check to fail when it is stale.
 
 name: chapkit_ghr_model
 version: 0.1.4
@@ -30,15 +26,16 @@ meta_data:
   citation_info: 'Lowe R, Lee SA, O''Reilly KM et al. (2021) Combined effects of hydrometeorological hazards
     and urbanisation on dengue risk in Brazil: a spatiotemporal modelling study. The Lancet Planetary
     Health. https://doi.org/10.1016/S2542-5196(20)30292-8'
+  config_format: flat
 user_options:
   additional_continuous_covariates:
     type: array
     items:
       type: string
-    description: Continuous covariates to include as fixed effects.
     default:
     - rainfall
     - mean_temperature
+    description: Continuous covariates to include as fixed effects.
   re_spatial:
     type: string
     enum:

@@ -94,10 +94,10 @@ lint:
 	@echo ">>> Ruff lint"
 	@uv run ruff check .
 	@echo ">>> MLproject check"
-	@uv run python tools/mlproject.py --check
+	@uv run chapkit mlproject export --check
 
 mlproject:
-	@uv run python tools/mlproject.py
+	@uv run chapkit mlproject export
 
 # test-contract and test-api, but against the service `chapkit mlproject run`
 # builds from the MLproject instead of main.py. test-api is the one that

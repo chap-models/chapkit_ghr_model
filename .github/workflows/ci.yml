@@ -86,8 +86,7 @@ jobs:
           exit 1
       - name: Run chapkit test against the MLproject service
         run: uv run chapkit test --url http://localhost:8000 --rows 400 --predict-rows 200 --timeout 1200 --verbose
-      # Real data with geometry, and checks the config reached the scripts
-      # (mlproject run writes config.yml in chap-core's nested layout).
+      # Real data with geometry, and checks the config reached the scripts.
       - name: Run API smoke test against the MLproject service
         run: python3 tools/api_smoke.py http://localhost:8000
       - name: MLproject container logs on failure

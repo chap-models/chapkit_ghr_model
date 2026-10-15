@@ -67,14 +67,13 @@ does exactly that, with `on.exit()` cleanup so the globals do not leak.
 
 ```
 main.py            chapkit service definition and config schema
-MLproject          the same model as an MLproject, generated from main.py
+MLproject          the same model as an MLproject, generated from main.py by `chapkit mlproject export`
 scripts/           what the runner invokes, and nothing else
   lib.R              shared wrapper helpers
   train.R            train entry point: validate + placeholder (no-op)
   selection_report.R optional RE selection report, sourced only when enabled
   predict.R          predict entry point (fit + posterior draws)
 tools/             development tooling, not shipped in the image
-  mlproject.py         generates MLproject from main.py, and checks it in `make lint`
   make_example_data.R  regenerates example_data/ from dengue_MS
   api_smoke.py         end-to-end API test, driven by `make test-api`
   test_lib.R           unit checks, driven by `make test-unit`
@@ -103,10 +102,15 @@ docker compose -f compose.ghcr.yml up   # service on :8000
 
 `MLproject` describes the same model for `chapkit mlproject run` and
 `chap eval --run-config.as-chapkit`: the same service info, config options and
-defaults, and train/predict commands. It is generated from `main.py`, which
-stays the source of truth; edit `main.py` and run `make mlproject`.
-`make lint` (and so CI) fails when the file is stale, and also reads it back
-with chapkit's own MLproject parser to check the result matches `main.py`.
+defaults, and train/predict commands. It is generated from `main.py` by
+`chapkit mlproject export`, so `main.py` stays the source of truth: edit it and
+run `make mlproject`. `make lint` (and so CI) runs `chapkit mlproject export
+--check`, which fails when the file is stale or when `chapkit mlproject run`
+would read it as a different service.
+
+Export warns about one setting an MLproject cannot carry: `main.py` registers
+with a 15s keepalive. Pass `--keepalive-interval 15` to `chapkit mlproject run`
+to keep it when the service registers with chap-core.
 
 The commands need R with INLA and GHRmodel, so the MLproject declares no
 environment; the service image provides one, and has the MLproject in `/work`:
@@ -122,9 +126,12 @@ Point `chap eval --model-name http://localhost:8000` at the running service, or
 use `chap eval --run-config.as-chapkit` directly on a machine that has R,
 INLA and GHRmodel installed.
 
-`chapkit mlproject run` writes `config.yml` in chap-core's layout, with the
-model options nested under `user_option_values`; `read_config()` in
-`scripts/lib.R` accepts that as well as the flat layout `main.py` writes.
+The MLproject sets `meta_data.config_format: flat`, so `chapkit mlproject run`
+(chapkit 2.4.0 or later) writes the same flat `config.yml` as `main.py`. Older
+chapkit, such as the one installed alongside chap-core for
+`--run-config.as-chapkit` until chap-core moves to 2.4.0, ignores that key and
+nests the model options under `user_option_values`; `read_config()` in
+`scripts/lib.R` accepts both layouts.
 
 Chap's own MLproject runners (`docker_env` and friends) are not supported:
 they write the config under another file name, passed as `{model_config}`,
@@ -338,7 +345,7 @@ Error: Configured covariate(s) not present in the data: rainfall
 | `make test-local` | train + predict directly against the fixture |
 | `make test-contract` | chapkit's contract test; supplies no geometry, so it also covers the spatial-effect-disabled path |
 | `make test-api` | real train and predict jobs over REST with geometry, returning 33 rows x 100 samples |
-| `make test-mlproject` | `test-contract` and `test-api` against the service `chapkit mlproject run` builds from `MLproject`, which writes `config.yml` in chap-core's nested layout |
+| `make test-mlproject` | `test-contract` and `test-api` against the service `chapkit mlproject run` builds from `MLproject` |
 
 ## Equivalence with BSC's reference pipeline
 

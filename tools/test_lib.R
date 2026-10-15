@@ -182,8 +182,8 @@ check("neighbours despite invalid s2 geometry", as.vector(g), c(0, 1, 1, 0))
 check("s2 setting restored", sf::sf_use_s2(), TRUE)
 
 cat("\n== config layouts ==\n")
-# main.py's runner writes config.yml flat; `chapkit mlproject run` nests the
-# model options under user_option_values. Both must give the same config.
+# main.py and chapkit >= 2.4.0 write config.yml flat; older `chapkit mlproject run`
+# nests the model options under user_option_values. Both must give the same config.
 cfg_file <- tempfile(fileext = ".yml")
 writeLines(c("prediction_periods: 2", "n_samples: 100", "roll_sum: ''"), cfg_file)
 flat <- read_config(cfg_file)
