@@ -1,4 +1,4 @@
-# Unit checks for the pure helpers in scripts/lib.R.
+# Unit checks for the pure helpers in ghr/lib.R.
 #
 # Development tooling, not shipped in the image. Run with:
 #   docker run --rm -v "$PWD":/work <image> Rscript tools/test_lib.R
@@ -6,7 +6,7 @@
 # These are the functions where a silent wrong answer is plausible: period
 # handling, the nested-parameter encodings, and the CLI arg guard.
 
-source("scripts/lib.R")
+source("ghr/lib.R")
 
 fails <- 0
 check <- function(label, actual, expected) {

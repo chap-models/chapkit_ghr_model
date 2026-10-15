@@ -12,7 +12,7 @@ help:
 	@echo "  build          Build docker image ($(IMAGE))"
 	@echo "  run            Build and run the service on :8000"
 	@echo "  run-ghcr       Pull and run the prebuilt GHCR image on :8000"
-	@echo "  test-unit      Unit checks for the pure helpers in scripts/lib.R"
+	@echo "  test-unit      Unit checks for the pure helpers in ghr/lib.R"
 	@echo "  test-local     Run train.R + predict.R directly against example_data"
 	@echo "  serve-test     Start a detached test service on :$(TEST_PORT)"
 	@echo "  test-contract  chapkit's own end-to-end contract test (synthetic data)"
@@ -36,7 +36,7 @@ run-ghcr:
 	@docker run --rm --pull always --platform linux/amd64 -p 8000:8000 --name chapkit-ghr-model $(GHCR_IMAGE)
 
 test-unit: build
-	@echo ">>> Unit checks for scripts/lib.R"
+	@echo ">>> Unit checks for ghr/lib.R"
 	@docker run --rm --platform linux/amd64 -v $(PWD):/work $(IMAGE) Rscript tools/test_lib.R
 
 # Exercises the scripts through chapkit's contract (config.yml in cwd, CSV in,
@@ -48,10 +48,10 @@ test-local: build
 		-v $(PWD)/example_data:/work/example_data:ro \
 		-v $(PWD)/test_out:/work/test_out \
 		$(IMAGE) bash -c "\
-			w=\$$(mktemp -d) && cp -r scripts \$$w/scripts && \
+			w=\$$(mktemp -d) && cp -r ghr \$$w/ghr && \
 			cp example_data/config.yml \$$w/config.yml && cd \$$w && \
-			Rscript scripts/train.R --data /work/example_data/training_data.csv --geo /work/example_data/geo.json && \
-			Rscript scripts/predict.R \
+			Rscript ghr/train.R --data /work/example_data/training_data.csv --geo /work/example_data/geo.json && \
+			Rscript ghr/predict.R \
 				--historic /work/example_data/training_data.csv \
 				--future /work/example_data/future_data.csv \
 				--geo /work/example_data/geo.json \
