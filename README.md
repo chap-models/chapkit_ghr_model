@@ -67,6 +67,7 @@ does exactly that, with `on.exit()` cleanup so the globals do not leak.
 
 ```
 main.py            chapkit service definition and config schema
+MLproject          the same model as an MLproject, generated from main.py by `chapkit mlproject export`
 scripts/           what the runner invokes, and nothing else
   lib.R              shared wrapper helpers
   train.R            train entry point: validate + placeholder (no-op)
@@ -88,6 +89,7 @@ make test-unit      # unit checks for the helpers in scripts/lib.R
 make test-local     # run train.R + predict.R directly against example_data
 make test-contract  # chapkit's own contract test (synthetic data, no geo)
 make test-api       # train + predict as real API jobs, with real geometry
+make test-mlproject # test-contract + test-api against `chapkit mlproject run`
 ```
 
 Or run the prebuilt image from GHCR (once published):
@@ -95,6 +97,45 @@ Or run the prebuilt image from GHCR (once published):
 ```bash
 docker compose -f compose.ghcr.yml up   # service on :8000
 ```
+
+## Running from the MLproject
+
+`MLproject` describes the same model for `chapkit mlproject run` and
+`chap eval --run-config.as-chapkit`: the same service info, config options and
+defaults, and train/predict commands. It is generated from `main.py` by
+`chapkit mlproject export`, so `main.py` stays the source of truth: edit it and
+run `make mlproject`. `make lint` (and so CI) runs `chapkit mlproject export
+--check`, which fails when the file is stale or when `chapkit mlproject run`
+would read it as a different service.
+
+Export warns about one setting an MLproject cannot carry: `main.py` registers
+with a 15s keepalive. Pass `--keepalive-interval 15` to `chapkit mlproject run`
+to keep it when the service registers with chap-core.
+
+The commands need R with INLA and GHRmodel, so the MLproject declares no
+environment; the service image provides one, and has the MLproject in `/work`:
+
+```bash
+docker run --rm --platform linux/amd64 -p 8000:8000 \
+  ghcr.io/chap-models/chapkit_ghr_model:latest \
+  chapkit mlproject run . --host 0.0.0.0 --port 8000
+```
+
+`make test-mlproject` does this and runs the contract and API smoke tests against it.
+Point `chap eval --model-name http://localhost:8000` at the running service, or
+use `chap eval --run-config.as-chapkit` directly on a machine that has R,
+INLA and GHRmodel installed.
+
+The MLproject sets `meta_data.config_format: flat`, so `chapkit mlproject run`
+(chapkit 2.4.0 or later) writes the same flat `config.yml` as `main.py`.
+chap-core requires 2.4.0 for `--run-config.as-chapkit` since
+dhis2-chap/chap-core#737. Older chapkit, as in chap-core installs from before
+that, ignores the key and nests the model options under `user_option_values`;
+`read_config()` in `scripts/lib.R` accepts both layouts.
+
+Chap's own MLproject runners (`docker_env` and friends) are not supported:
+they write the config under another file name, passed as `{model_config}`,
+which the scripts do not read.
 
 ## Configuration
 
@@ -304,6 +345,7 @@ Error: Configured covariate(s) not present in the data: rainfall
 | `make test-local` | train + predict directly against the fixture |
 | `make test-contract` | chapkit's contract test; supplies no geometry, so it also covers the spatial-effect-disabled path |
 | `make test-api` | real train and predict jobs over REST with geometry, returning 33 rows x 100 samples |
+| `make test-mlproject` | `test-contract` and `test-api` against the service `chapkit mlproject run` builds from `MLproject` |
 
 ## Equivalence with BSC's reference pipeline
 

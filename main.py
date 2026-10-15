@@ -202,7 +202,7 @@ runner: ShellModelRunner[GHRModelConfig] = ShellModelRunner(
 info = MLServiceInfo(
     id="chapkit-ghr-model",
     display_name="GHRmodel (chapkit)",
-    version="0.1.4",
+    version="0.1.5",
     description=(
         "Bayesian hierarchical spatio-temporal model for climate-sensitive disease, "
         "built on R-INLA. Wraps BSC's GHRmodel package (dhis2-workflow branch), running "
@@ -211,6 +211,10 @@ info = MLServiceInfo(
     ),
     model_metadata=ModelMetadata(
         author="Global Health Resilience group, BSC (wrapped for CHAP by HISP Centre)",
+        author_note=(
+            "Wraps BSC's GHRmodel without modifying it. The wrapper is maintained by HISP Centre; "
+            "BSC does not support this service."
+        ),
         author_assessed_status=AssessedStatus.red,
         # Wrapper maintainer, not BSC: they authored the model but don't support this service.
         contact_email="morten@dhis2.org",

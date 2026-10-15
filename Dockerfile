@@ -35,7 +35,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ARG GIT_REVISION=""
 ENV GIT_REVISION=${GIT_REVISION}
 
-COPY main.py ./
+COPY main.py MLproject ./
 COPY scripts/ ./scripts/
 
 # The two chmods are load-bearing: INLA's binaries ship 0744 (predict fails with

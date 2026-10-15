@@ -42,6 +42,12 @@ opt_path <- function(p) {
 
 read_config <- function(path = "config.yml") {
   cfg <- if (file.exists(path)) yaml.load_file(path) else list()
+  # chapkit before 2.4.0 nests the model options under user_option_values.
+  nested <- cfg$user_option_values
+  if (is.list(nested)) {
+    cfg$user_option_values <- NULL
+    cfg[names(nested)] <- nested
+  }
   # Defaults mirror GHRModelConfig in main.py so the scripts stay runnable
   # standalone (outside chapkit) for debugging.
   defaults <- list(
