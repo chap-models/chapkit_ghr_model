@@ -36,7 +36,7 @@ ARG GIT_REVISION=""
 ENV GIT_REVISION=${GIT_REVISION}
 
 COPY main.py MLproject ./
-COPY scripts/ ./scripts/
+COPY ghr/ ./ghr/
 
 # The two chmods are load-bearing: INLA's binaries ship 0744 (predict fails with
 # "inla.mkl.run: Permission denied" without a+rX), and select_report() renders

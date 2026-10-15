@@ -7,13 +7,13 @@
 # mirroring the existing chapkit EWARS model.
 #
 # The one optional extra, BSC's random-effect selection report, lives in
-# scripts/selection_report.R and is sourced only when the flag is on.
+# ghr/selection_report.R and is sourced only when the flag is on.
 
 suppressPackageStartupMessages({
   library("GHRmodel")
 })
 
-source("scripts/lib.R")
+source("ghr/lib.R")
 
 args <- commandArgs(trailingOnly = TRUE)
 opts <- parse_args(args, c("data", "geo"))
@@ -44,7 +44,7 @@ offset_col <- off$offset_col
 # Optional random-effect selection report. Sourced inside the conditional so the
 # default training path never loads it.
 if (isTRUE(cfg$emit_re_selection_report)) {
-  source("scripts/selection_report.R")
+  source("ghr/selection_report.R")
   run_re_selection_report(df, cfg, geo_file, offset_col)
 }
 

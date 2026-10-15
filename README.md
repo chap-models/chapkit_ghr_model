@@ -60,7 +60,7 @@ function's frame. Binding them as locals fails with
 
 This matters when refactoring. `predict.R` assigns them at top level, which is
 global by definition — moving that code into a function without an explicit
-`assign(..., envir = globalenv())` will break it. `scripts/selection_report.R`
+`assign(..., envir = globalenv())` will break it. `ghr/selection_report.R`
 does exactly that, with `on.exit()` cleanup so the globals do not leak.
 
 ## Layout
@@ -68,7 +68,7 @@ does exactly that, with `on.exit()` cleanup so the globals do not leak.
 ```
 main.py            chapkit service definition and config schema
 MLproject          the same model as an MLproject, generated from main.py by `chapkit mlproject export`
-scripts/           what the runner invokes, and nothing else
+ghr/               what the runner invokes, and nothing else
   lib.R              shared wrapper helpers
   train.R            train entry point: validate + placeholder (no-op)
   selection_report.R optional RE selection report, sourced only when enabled
@@ -85,7 +85,7 @@ example_data/      fixtures
 ```bash
 make build          # build the image
 make run            # run the service on :8000
-make test-unit      # unit checks for the helpers in scripts/lib.R
+make test-unit      # unit checks for the helpers in ghr/lib.R
 make test-local     # run train.R + predict.R directly against example_data
 make test-contract  # chapkit's own contract test (synthetic data, no geo)
 make test-api       # train + predict as real API jobs, with real geometry
@@ -131,7 +131,7 @@ The MLproject sets `meta_data.config_format: flat`, so `chapkit mlproject run`
 chap-core requires 2.4.0 for `--run-config.as-chapkit` since
 dhis2-chap/chap-core#737. Older chapkit, as in chap-core installs from before
 that, ignores the key and nests the model options under `user_option_values`;
-`read_config()` in `scripts/lib.R` accepts both layouts.
+`read_config()` in `ghr/lib.R` accepts both layouts.
 
 Chap's own MLproject runners (`docker_env` and friends) are not supported:
 they write the config under another file name, passed as `{model_config}`,
@@ -341,7 +341,7 @@ Error: Configured covariate(s) not present in the data: rainfall
 
 | Target | What it establishes |
 |---|---|
-| `make test-unit` | 50 checks over the pure helpers in `scripts/lib.R` |
+| `make test-unit` | 50 checks over the pure helpers in `ghr/lib.R` |
 | `make test-local` | train + predict directly against the fixture |
 | `make test-contract` | chapkit's contract test; supplies no geometry, so it also covers the spatial-effect-disabled path |
 | `make test-api` | real train and predict jobs over REST with geometry, returning 33 rows x 100 samples |

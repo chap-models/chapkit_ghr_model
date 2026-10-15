@@ -18,7 +18,7 @@ Design notes:
   but the CHAP Modeling App (and chapkit's own console) only render flat scalars,
   enums and scalar arrays as editable form controls -- a nested object drops to
   raw-JSON editing. Keeping the fields editable, they are encoded as strings
-  here: "mean_temperature:1,3;rainfall:3". See scripts/lib.R:parse_spec for the parser.
+  here: "mean_temperature:1,3;rainfall:3". See ghr/lib.R:parse_spec for the parser.
 - No GHRmodel source is modified. Everything below drives its exported API.
 """
 
@@ -192,9 +192,9 @@ class GHRModelConfig(BaseConfig):
 
 
 runner: ShellModelRunner[GHRModelConfig] = ShellModelRunner(
-    train_command="Rscript scripts/train.R --data {data_file} --geo {geo_file}",
+    train_command="Rscript ghr/train.R --data {data_file} --geo {geo_file}",
     predict_command=(
-        "Rscript scripts/predict.R --historic {historic_file} --future {future_file} "
+        "Rscript ghr/predict.R --historic {historic_file} --future {future_file} "
         "--geo {geo_file} --output {output_file}"
     ),
 )
@@ -202,7 +202,7 @@ runner: ShellModelRunner[GHRModelConfig] = ShellModelRunner(
 info = MLServiceInfo(
     id="chapkit-ghr-model",
     display_name="GHRmodel (chapkit)",
-    version="0.1.5",
+    version="0.1.6",
     description=(
         "Bayesian hierarchical spatio-temporal model for climate-sensitive disease, "
         "built on R-INLA. Wraps BSC's GHRmodel package (dhis2-workflow branch), running "

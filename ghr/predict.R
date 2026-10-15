@@ -17,7 +17,7 @@ suppressPackageStartupMessages({
   library("GHRmodel")
 })
 
-source("scripts/lib.R")
+source("ghr/lib.R")
 
 args <- commandArgs(trailingOnly = TRUE)
 opts <- parse_args(args, c("historic", "future", "geo", "output"))
