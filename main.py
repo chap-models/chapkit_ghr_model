@@ -211,8 +211,6 @@ info = MLServiceInfo(
     ),
     model_metadata=ModelMetadata(
         author="Global Health Resilience group, BSC (wrapped for CHAP by HISP Centre)",
-        # Set explicitly: an MLproject without one serves the description in its place,
-        # and `chapkit mlproject export --check` checks the two services report the same info.
         author_note=(
             "Wraps BSC's GHRmodel without modifying it. The wrapper is maintained by HISP Centre; "
             "BSC does not support this service."

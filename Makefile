@@ -99,9 +99,6 @@ lint:
 mlproject:
 	@uv run chapkit mlproject export
 
-# test-contract and test-api, but against the service `chapkit mlproject run`
-# builds from the MLproject instead of main.py. test-api is the one that
-# catches a config not reaching the scripts: it checks n_samples took effect.
 test-mlproject: build
 	@docker rm -f chapkit-ghr-model-mlproject >/dev/null 2>&1 || true
 	@docker run -d --platform linux/amd64 -p $(TEST_PORT):8000 \
