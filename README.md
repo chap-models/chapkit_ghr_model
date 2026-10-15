@@ -127,11 +127,11 @@ use `chap eval --run-config.as-chapkit` directly on a machine that has R,
 INLA and GHRmodel installed.
 
 The MLproject sets `meta_data.config_format: flat`, so `chapkit mlproject run`
-(chapkit 2.4.0 or later) writes the same flat `config.yml` as `main.py`. Older
-chapkit, such as the one installed alongside chap-core for
-`--run-config.as-chapkit` until chap-core moves to 2.4.0, ignores that key and
-nests the model options under `user_option_values`; `read_config()` in
-`scripts/lib.R` accepts both layouts.
+(chapkit 2.4.0 or later) writes the same flat `config.yml` as `main.py`.
+chap-core requires 2.4.0 for `--run-config.as-chapkit` since
+dhis2-chap/chap-core#737. Older chapkit, as in chap-core installs from before
+that, ignores the key and nests the model options under `user_option_values`;
+`read_config()` in `scripts/lib.R` accepts both layouts.
 
 Chap's own MLproject runners (`docker_env` and friends) are not supported:
 they write the config under another file name, passed as `{model_config}`,
