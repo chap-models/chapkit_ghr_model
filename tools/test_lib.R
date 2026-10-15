@@ -170,6 +170,17 @@ check("bare --geo does not eat --output", a$geo, NULL)
 check("output still parsed", a$output, "o.csv")
 check("historic parsed", a$historic, "h.csv")
 
+cat("\n== adjacency graph ==\n")
+# Ho Chi Minh City and Binh Duong from the Vietnam province boundaries
+# (geoBoundaries, via dhis2/climate-health-data). Valid in the plane, but s2
+# rejects Ho Chi Minh City with "Edge 95 crosses edge 97".
+geo <- "tools/fixtures/s2_invalid_geo.json"
+check("s2 rejects the fixture",
+      inherits(try(sf::st_as_s2(sf::st_read(geo, quiet = TRUE)), silent = TRUE), "try-error"), TRUE)
+g <- build_graph(geo, c("VN-SG", "VN-57"))
+check("neighbours despite invalid s2 geometry", as.vector(g), c(0, 1, 1, 0))
+check("s2 setting restored", sf::sf_use_s2(), TRUE)
+
 cat("\n")
 if (fails > 0) {
   cat("FAILED:", fails, "check(s)\n")

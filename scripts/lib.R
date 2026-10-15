@@ -338,6 +338,13 @@ build_graph <- function(geo_path, locations) {
   }
 
   polys <- polys[match(wanted, ids), ]
+  # poly2nb checks shared borders with sf's spherical s2 engine by default, and
+  # s2 rejects some boundaries that are valid in the plane: Ho Chi Minh City in
+  # the Vietnam provinces fails with "Edge 95 crosses edge 97". Adjacency only
+  # needs shared borders, so build it with planar geometry instead, and restore
+  # the caller's setting afterwards.
+  use_s2 <- suppressMessages(sf::sf_use_s2(FALSE))
+  on.exit(suppressMessages(sf::sf_use_s2(use_s2)), add = TRUE)
   nb <- spdep::poly2nb(polys)
 
   # A disconnected graph is legal but weakens bym2 -- areas in separate
