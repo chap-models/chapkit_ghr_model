@@ -170,6 +170,19 @@ check("bare --geo does not eat --output", a$geo, NULL)
 check("output still parsed", a$output, "o.csv")
 check("historic parsed", a$historic, "h.csv")
 
+cat("\n== row order for fitting ==\n")
+# Built like predict.R: by location, forecast rows appended at the end.
+rows <- data.frame(
+  location = c("A", "A", "B", "B", "A", "B"),
+  time = as.Date(c("2010-01-01", "2010-02-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-03-01")),
+  stringsAsFactors = FALSE
+)
+o <- order_for_fit(rows, c(FALSE, FALSE, FALSE, FALSE, TRUE, TRUE))
+check("time, then location", paste(o$data$location, format(o$data$time, "%m")),
+      c("A 01", "B 01", "A 02", "B 02", "A 03", "B 03"))
+check("forecast flag follows its rows", o$is_future, c(FALSE, FALSE, FALSE, FALSE, TRUE, TRUE))
+check("row names reset", rownames(o$data), as.character(1:6))
+
 cat("\n== adjacency graph ==\n")
 # Ho Chi Minh City and Binh Duong from the Vietnam province boundaries
 # (geoBoundaries, via dhis2/climate-health-data). Valid in the plane, but s2

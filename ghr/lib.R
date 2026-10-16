@@ -478,6 +478,22 @@ ave_by <- function(x, grp, fn) {
   out
 }
 
+#' Put the rows in time, then location order for fitting, with the forecast flag
+#' carried along.
+#'
+#' INLA 25.10.19 can abort with "GMRFLib_idxval_nsort_x_core: Assertion `0 == 1'
+#' failed" on the iid year effect when the rows are ordered by location with the
+#' forecast rows appended, which is how predict.R builds them. It happened on the
+#' Vietnam provinces for one backtest window (training to 2010-06), with 1 or 4
+#' threads; the same rows in time order fit. The rows are independent in the
+#' likelihood, so their order does not change the model.
+order_for_fit <- function(data, is_future) {
+  ord <- order(data$time, data$location)
+  data <- data[ord, , drop = FALSE]
+  rownames(data) <- NULL
+  list(data = data, is_future = is_future[ord])
+}
+
 #' Shift a vector forward by n, padding the head with NA.
 shift_n <- function(x, n) {
   if (n <= 0) return(x)

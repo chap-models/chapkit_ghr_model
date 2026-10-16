@@ -255,6 +255,11 @@ formulas <- GHRmodel::as_GHRformulas(formulas)
 # Fit and sample
 # ---------------------------------------------------------------------------
 
+# Time order sidesteps an INLA crash on some row orders; see order_for_fit().
+ordered <- order_for_fit(combined, is_future)
+combined <- ordered$data
+is_future <- ordered$is_future
+
 models <- GHRmodel::fit_models(
   formulas = formulas,
   data = combined,
