@@ -1,5 +1,5 @@
-# GHRmodel chapkit service. The chapkit-r-inla base ships R 4.5 + INLA + the
-# spatial stack; only cowplot and GHRexplore are missing.
+# GHRmodel chapkit service. The chapkit-r-inla base ships R 4.5, INLA, renv
+# and the spatial stack's system libraries.
 #
 # amd64 only -- INLA publishes x86_64 Linux binaries only; arm64 hosts run it
 # under emulation.
@@ -9,21 +9,13 @@ FROM --platform=${BASE_PLATFORM} ghcr.io/dhis2-chap/chapkit-r-inla:latest
 USER root
 WORKDIR /work
 
-# The two GHRmodel imports the base lacks, both on CRAN.
-RUN R -q -e "install.packages(c('cowplot','GHRexplore'), repos='https://cloud.r-project.org')" \
-    && R -q -e "stopifnot(requireNamespace('cowplot'), requireNamespace('GHRexplore'))"
-
-# GHRmodel pinned to a commit for reproducible builds. Clone-then-checkout
-# rather than remotes::install_git(ref=<sha>): a bare-SHA `git fetch` is
-# rejected unless the server enables uploadpack.allowReachableSHA1InWant.
-ARG GHRMODEL_BRANCH=dhis2-workflow
-ARG GHRMODEL_REF=b2f433bd7febc921f51f37cd7376e79cb8f12058
-RUN git clone --branch "${GHRMODEL_BRANCH}" \
-        https://gitlab.earth.bsc.es/ghr/ghrmodel.git /tmp/ghrmodel \
-    && git -C /tmp/ghrmodel checkout --quiet "${GHRMODEL_REF}" \
-    && R -q -e "install.packages('/tmp/ghrmodel', repos=NULL, type='source')" \
-    && R -q -e "library(GHRmodel); stopifnot(all(sapply(c('select_re','select_fe','select_report','fit_models','sample_ppd'), exists)))" \
-    && rm -rf /tmp/ghrmodel
+# The R packages, GHRmodel included (pinned to a commit), come from renv.lock,
+# the same lockfile a standalone run restores. The project is not activated, so
+# restore installs into the site library, and packages the base already has at
+# the locked version are left alone.
+COPY renv.lock ./
+RUN R -q -e "renv::restore(library = .libPaths()[1], prompt = FALSE)" \
+    && R -q -e "library(GHRmodel); stopifnot(all(sapply(c('select_re','select_fe','select_report','fit_models','sample_ppd'), exists)))"
 
 # Python deps into the base image's existing venv (--no-dev: the base ships uvicorn).
 COPY pyproject.toml uv.lock ./

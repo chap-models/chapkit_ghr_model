@@ -20,6 +20,110 @@ config field.
 No GHRmodel source is modified — the wrapper drives only its exported API, per
 BSC's request that we wrap rather than edit their modelling code.
 
+## Walkthrough: from a clone to a CHAP evaluation
+
+This section is for GHRmodel users who want to see what we did with the model
+and repeat it. In short:
+
+- `ghr/train.R` and `ghr/predict.R` are plain R scripts that fit one GHRmodel
+  configuration with `write_inla_formulas()`, `fit_models()` and `sample_ppd()`,
+  and write posterior samples for the forecast periods. They read their settings
+  from a `config.yml` in the working directory.
+- `main.py` (a [chapkit](https://github.com/dhis2-chap/chapkit) service) and
+  `MLproject` describe the same model to CHAP: its settings, and the two
+  commands to run.
+- `renv.lock` pins the R packages, with GHRmodel at a fixed commit of the
+  `dhis2-workflow` branch. The Docker image is built from the same lockfile.
+
+You need x86_64 Linux (INLA ships no other Linux binaries), R 4.5, git, and the
+system libraries the R packages link against. On Debian or Ubuntu:
+
+```bash
+sudo apt-get install git libgdal-dev libgeos-dev libproj-dev libudunits2-dev libuv1-dev
+```
+
+### 1. Clone and restore the R packages
+
+```bash
+git clone https://github.com/chap-models/chapkit_ghr_model.git
+cd chapkit_ghr_model
+Rscript -e 'install.packages("renv")'
+Rscript -e 'renv::restore(library = .libPaths()[1], prompt = FALSE)'
+```
+
+This installs the locked versions of GHRmodel, INLA and their dependencies into
+your first R library. To keep them apart from your other packages, point
+`R_LIBS_USER` at an empty directory before this step and keep it set for the
+steps below.
+
+### 2. Run the model on the example data
+
+`example_data/` holds GHRmodel's own `dengue_MS` data (11 Brazilian
+microregions, monthly), with the last 3 months held out as the forecast
+horizon. See [Example data](#example-data) for how it was made. From the
+repository root:
+
+```bash
+cp example_data/config.yml config.yml
+Rscript ghr/train.R --data example_data/training_data.csv --geo example_data/geo.json
+Rscript ghr/predict.R \
+  --historic example_data/training_data.csv \
+  --future example_data/future_data.csv \
+  --geo example_data/geo.json \
+  --output predictions.csv
+```
+
+`train.R` only validates its inputs (see [How it works](#how-it-works)).
+`predict.R` fits the model and writes `predictions.csv`: one row per location
+and forecast month, with 200 posterior samples. Edit `config.yml` to try other
+settings; [Configuration](#configuration) lists them.
+
+### 3. Run it inside CHAP
+
+[chap-core](https://github.com/dhis2-chap/chap-core) evaluates the same model
+with a rolling-origin backtest: it trains on the history, forecasts the next 3
+months from several cut-off points, and scores the forecasts against what was
+observed. Install it with [uv](https://docs.astral.sh/uv/), then run the
+evaluation from the repository root:
+
+```bash
+uv tool install chap-core
+cp example_data/geo.json example_data/training_data.geojson
+chap eval \
+  --model-name . \
+  --dataset-csv example_data/training_data.csv \
+  --model-configuration-yaml example_data/chap_config.yml \
+  --backtest-params.n-splits 3 \
+  --output-file eval.nc \
+  --run-config.as-chapkit
+```
+
+`chap eval` finds the polygons next to the CSV, which is what the copy is for.
+`--run-config.as-chapkit` starts the model as a chapkit service from `MLproject`
+and runs the R scripts with the packages restored in step 1.
+`example_data/chap_config.yml` holds the settings of `example_data/config.yml`
+in the layout CHAP reads. The predictions, observations and scores are written
+to `eval.nc`; `chap plot-backtest` plots them. See the
+[`chap eval` reference](https://github.com/dhis2-chap/chap-core/blob/master/docs/chap-cli/eval-reference.md)
+for the options.
+
+Without R on the machine, run the model from the Docker image instead and point
+`chap eval` at it from a second terminal:
+
+```bash
+make run    # builds the image and serves the model on :8000
+```
+
+```bash
+chap eval \
+  --model-name http://localhost:8000 \
+  --dataset-csv example_data/training_data.csv \
+  --model-configuration-yaml example_data/chap_config.yml \
+  --backtest-params.n-splits 3 \
+  --output-file eval.nc \
+  --run-config.is-chapkit-model
+```
+
 ## Scope
 
 BSC's workflow is a three-stage, human-in-the-loop model *selection* process:
@@ -68,6 +172,7 @@ does exactly that, with `on.exit()` cleanup so the globals do not leak.
 ```
 main.py            chapkit service definition and config schema
 MLproject          the same model as an MLproject, generated from main.py by `chapkit mlproject export`
+renv.lock          pinned R packages, restored by the Dockerfile and by standalone runs
 ghr/               what the runner invokes, and nothing else
   lib.R              shared wrapper helpers
   train.R            train entry point: validate + placeholder (no-op)
@@ -112,8 +217,10 @@ Export warns about one setting an MLproject cannot carry: `main.py` registers
 with a 15s keepalive. Pass `--keepalive-interval 15` to `chapkit mlproject run`
 to keep it when the service registers with chap-core.
 
-The commands need R with INLA and GHRmodel, so the MLproject declares no
-environment; the service image provides one, and has the MLproject in `/work`:
+The commands need R with the packages in `renv.lock`. The MLproject declares no
+environment, because `chapkit mlproject export` cannot write one, so restore
+them first as in [the walkthrough](#1-clone-and-restore-the-r-packages). The
+service image has them, and has the MLproject in `/work`:
 
 ```bash
 docker run --rm --platform linux/amd64 -p 8000:8000 \
@@ -123,8 +230,8 @@ docker run --rm --platform linux/amd64 -p 8000:8000 \
 
 `make test-mlproject` does this and runs the contract and API smoke tests against it.
 Point `chap eval --model-name http://localhost:8000` at the running service, or
-use `chap eval --run-config.as-chapkit` directly on a machine that has R,
-INLA and GHRmodel installed.
+use `chap eval --run-config.as-chapkit` directly on a machine where `renv.lock`
+has been restored.
 
 The MLproject sets `meta_data.config_format: flat`, so `chapkit mlproject run`
 (chapkit 2.4.0 or later) writes the same flat `config.yml` as `main.py`.
@@ -425,10 +532,15 @@ INLA at all.
 
 ## Dependencies
 
-`ghcr.io/dhis2-chap/chapkit-r-inla` already ships R 4.5, INLA 25.10.19 and the
-spatial stack. The only additions are `cowplot` and `GHRexplore` (both on CRAN —
-GHRexplore is v0.2.2) plus
-GHRmodel itself, pinned to a commit on the `dhis2-workflow` branch.
+`renv.lock` pins every R package the scripts use: GHRmodel at a commit on the
+`dhis2-workflow` branch, INLA 25.10.19 from the INLA repository, and the rest from
+CRAN through Posit Package Manager, which serves Linux binaries. The Dockerfile
+restores it on top of `ghcr.io/dhis2-chap/chapkit-r-inla`, which already ships R
+4.5, INLA and the spatial stack, so the build mostly adds GHRmodel, `cowplot` and
+`GHRexplore`.
+
+To move GHRmodel to another commit, change `RemoteSha` in its `renv.lock` entry
+and rebuild.
 
 ## License
 
