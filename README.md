@@ -9,7 +9,7 @@ Bayesian hierarchical spatio-temporal model for climate-sensitive disease from t
 Global Health Resilience group at the Barcelona Supercomputing Center, wrapped so
 that [CHAP](https://github.com/dhis2-chap/chap-core) can train, run and evaluate it.
 
-## What we did with GHRmodel
+## What has been done here (in the wrapper)
 
 - **GHRmodel itself is unmodified.** `ghr/train.R` and `ghr/predict.R` are plain R
   scripts that call its exported API (`write_inla_formulas()`, `fit_models()`,
