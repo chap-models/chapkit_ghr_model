@@ -1,0 +1,23 @@
+# The example_data/config.yml settings in the layout `chap eval
+# --model-configuration-yaml` reads: covariates at the top level, every other
+# option under user_option_values. Used by the README walkthrough.
+
+additional_continuous_covariates:
+  - mean_temperature
+  - pdsi
+
+user_option_values:
+  re_spatial: bym2
+  re_seasonal: rw1
+  re_interannual: iid
+  priors: "0.5:0.01"
+  roll_mean: "mean_temperature:3;pdsi:3"
+  roll_sum: ""
+  lag: "mean_temperature:1;pdsi:1"
+  nl: ""
+  standardize: true
+  family: nbinomial
+  offset: population
+  offset_scale: 10000
+  n_samples: 200
+  nthreads: 4

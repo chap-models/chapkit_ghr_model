@@ -51,9 +51,11 @@ dir.create("example_data", showWarnings = FALSE)
 write.csv(training, "example_data/training_data.csv", row.names = FALSE)
 write.csv(future, "example_data/future_data.csv", row.names = FALSE)
 
-# Geometry, keyed so that `code` matches the data's location values.
+# Geometry, keyed so that `code` matches the data's location values. The same
+# value is also written as `id`, the property `chap eval` reads location ids from.
 map_MS$code <- as.character(map_MS$code)
 map_out <- map_MS[map_MS$code %in% unique(out$location), ]
+map_out$id <- map_out$code
 if (file.exists("example_data/geo.json")) file.remove("example_data/geo.json")
 sf::st_write(map_out, "example_data/geo.json", driver = "GeoJSON", quiet = TRUE)
 
