@@ -2,7 +2,7 @@
 # Regenerate with `chapkit mlproject export main.py`; add --check to fail when it is stale.
 
 name: chapkit_ghr_model
-version: 0.1.7
+version: 0.1.8
 target: disease_cases
 supported_period_type: month
 required_covariates:
