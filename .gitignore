@@ -54,3 +54,11 @@ report_test/
 /historic.csv
 /future.csv
 /predictions.csv
+
+# Written by the chap eval walkthrough in the README: the polygons copied next
+# to the CSV, the evaluation output (plus its plot with --plot), and chap's
+# per-run directory.
+/example_data/training_data.geojson
+/eval.nc
+/eval.html
+/runs/
