@@ -31,10 +31,15 @@ sudo apt-get install git libgdal-dev libgeos-dev libproj-dev libudunits2-dev lib
 
 ### 1. Clone and restore the R packages
 
+Posit Package Manager has prebuilt binaries for Ubuntu, Debian, RHEL and some
+other distributions, and renv uses them automatically, so there the restore is
+quick. Elsewhere it builds about 90 packages from source, which took around 10
+minutes on a typical machine.
+
 ```bash
 git clone https://github.com/chap-models/chapkit_ghr_model.git
 cd chapkit_ghr_model
-Rscript -e 'install.packages("renv")'
+Rscript -e 'install.packages("renv", repos = "https://cloud.r-project.org")'
 Rscript -e 'renv::restore(library = .libPaths()[1], prompt = FALSE)'
 ```
 
