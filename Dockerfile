@@ -4,7 +4,7 @@
 # amd64 only -- INLA publishes x86_64 Linux binaries only; arm64 hosts run it
 # under emulation.
 ARG BASE_PLATFORM=linux/amd64
-FROM --platform=${BASE_PLATFORM} ghcr.io/dhis2-chap/chapkit-r-inla:latest@sha256:71ccd15298303d05da310b48450453c3d7be4ee1ad3fede986170473745bdb0e
+FROM --platform=${BASE_PLATFORM} ghcr.io/dhis2-chap/chapkit-r-inla:latest@sha256:5773ecdfee901d0da595590a3fd85c83452c86c5df7cbfe7ee0709e690525e5f
 
 USER root
 WORKDIR /work
