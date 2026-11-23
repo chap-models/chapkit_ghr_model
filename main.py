@@ -210,7 +210,7 @@ info = MLServiceInfo(
         "and interannual random effects and lagged/rolling climate covariates."
     ),
     model_metadata=ModelMetadata(
-        author="Global Health Resilience group, BSC (wrapped for CHAP by HISP Centre)",
+        author="Carles Milà¹, Ania B. Kawiecki¹, Rachel Lowe¹,² on behalf of the BSC Global Health Resilience group",
         author_note=(
             "Wraps BSC's GHRmodel without modifying it. The wrapper is maintained by HISP Centre; "
             "BSC does not support this service."
@@ -218,7 +218,10 @@ info = MLServiceInfo(
         author_assessed_status=AssessedStatus.red,
         # Wrapper maintainer, not BSC: they authored the model but don't support this service.
         contact_email="morten@dhis2.org",
-        organization="Barcelona Supercomputing Center",
+        organization=(
+            "¹ Barcelona Supercomputing Center (BSC), Barcelona, Spain\n"
+            "² Catalan Institution for Research & Advanced Studies (ICREA), Barcelona, Spain"
+        ),
         organization_logo_url="https://www.bsc.es/sites/default/files/public/bscw2/content/about-bsc/bsc-logo.png",
         citation_info=(
             "Lowe R, Lee SA, O'Reilly KM et al. (2021) Combined effects of hydrometeorological "
